@@ -1,0 +1,45 @@
+{
+  "name": "gingermint",
+  "version": "0.0.0",
+  "license": "MIT",
+  "description": "GingerMint — Basecamp-style project collaboration on Dulak (Hono + bun:sqlite WAL + Inertia v3 + Svelte 5).",
+  "engines": {
+    "bun": ">=1.4.0"
+  },
+  "private": true,
+  "type": "module",
+  "module": "src/index.ts",
+  "scripts": {
+    "dev": "bun --watch src/index.ts",
+    "dev:css": "bunx @tailwindcss/cli -i src/client/tailwind.css -o src/client/.tailwind.css --watch",
+    "dev:background": "bun run scripts/dev.ts background",
+    "dev:status": "bun run scripts/dev.ts status",
+    "dev:stop": "bun run scripts/dev.ts stop",
+    "dev:logs": "bun run scripts/dev.ts logs",
+    "dev:restart": "bun run dev:stop && bun run dev:background",
+    "build": "bun run scripts/gen-pages.ts && bun run scripts/build.ts",
+    "start": "NODE_ENV=production bun run src/index.ts",
+    "db:seed": "bun run scripts/seed.ts",
+    "typecheck": "svelte-check --tsconfig ./tsconfig.json",
+    "lint": "biome lint src tests scripts create-dulak",
+    "test": "bun test --isolate",
+    "pages": "bun run scripts/gen-pages.ts",
+    "db:demo": "bun run scripts/demo.ts"
+  },
+  "dependencies": {
+    "@inertiajs/svelte": "^3.6.1",
+    "@sinclair/typebox": "^0.34.52",
+    "clsx": "^2.1.1",
+    "hono": "^4.13.0",
+    "lucide": "^1.48.0",
+    "svelte": "^5.56.8",
+    "tailwind-merge": "^3.7.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.7",
+    "@tailwindcss/cli": "^4.3.3",
+    "@types/bun": "^1.2.0",
+    "svelte-check": "^4.7.4",
+    "tailwindcss": "^4.3.3"
+  }
+}
