@@ -88,7 +88,7 @@ Wrap-up, project activity and **outgoing webhooks**) and usually
 | Timesheet | `timesheet.ts` | `timesheet.ts` | `timesheet/Index` |
 | Activity, search/jump, Everything, Reports, Lineup | `activity.ts`, `discovery.ts` | `activity.ts`, `discovery.ts` | `activity`, `search`, `everything`, `reports` |
 | Adminland | `adminland.ts` | `admin.ts` | `adminland/Index` |
-| Workspaces (list, create, switch) | `workspaces.ts` | `accounts.ts` | `workspaces/Index`, Jump menu |
+| Workspaces (list, create, switch, rename, leave, delete) | `workspaces.ts` | `accounts.ts` | `workspaces/Index`, Jump menu |
 | JSON API v1 (tokens) | `api.ts` | same services | — |
 | Inbound email | `inbound.ts` | `integrations.ts` | — |
 

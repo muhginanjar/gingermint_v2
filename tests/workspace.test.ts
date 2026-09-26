@@ -633,3 +633,45 @@ describe("multiple workspaces", () => {
 		expect(list.projects.map((p: { id: number }) => p.id)).toEqual([acmeProject]);
 	});
 });
+
+describe("renaming, leaving and deleting workspaces", () => {
+	const wsId = async (cookie: string, name: string): Promise<number> =>
+		(await page("/workspaces", cookie)).props.workspaces.find((w: { name: string }) => w.name === name)?.id ?? 0;
+
+	it("lets admins rename a workspace, and nobody else", async () => {
+		await post("/workspaces", member, { name: "Rename Me" });
+		const wid = await wsId(member, "Rename Me");
+		expect((await post(`/workspaces/${wid}`, member, { name: "  Renamed Co  " }, "PATCH")).status).toBe(303);
+		expect(await wsId(member, "Renamed Co")).toBe(wid);
+		// Owner isn't in it (404); a plain member of workspace 1 can't rename it (403).
+		expect((await call(`/workspaces/${wid}`, { method: "PATCH", headers: json, cookie: owner, body: { name: "x" } })).status).toBe(404);
+		expect((await call("/workspaces/1", { method: "PATCH", headers: json, cookie: member, body: { name: "x" } })).status).toBe(403);
+		expect((await call(`/workspaces/${wid}`, { method: "PATCH", headers: json, cookie: member, body: { name: " " } })).status).toBe(422);
+	});
+
+	it("lets people leave, but not the last admin", async () => {
+		const wid = await wsId(member, "Renamed Co");
+		const lone = await call(`/workspaces/${wid}/leave`, { method: "POST", headers: json, cookie: member });
+		expect(lone.status).toBe(422);
+		await post(`/workspaces/${wid}/switch`, member);
+		await call("/adminland/people", { method: "POST", headers: json, cookie: member, body: { name: "", email: "olivia@example.com", role: "member" } });
+		expect((await call(`/workspaces/${wid}/leave`, { method: "POST", headers: json, cookie: owner })).status).toBe(303);
+		expect(await wsId(owner, "Renamed Co")).toBe(0);
+	});
+
+	it("deletes a workspace with everything in it after typing its name", async () => {
+		const wid = await wsId(member, "Renamed Co");
+		await post(`/workspaces/${wid}/switch`, member);
+		const made = await post("/projects", member, { name: "Doomed project" });
+		const pid = Number(new URL(made.headers.get("location") ?? "").pathname.split("/").pop());
+		const wrong = await call(`/workspaces/${wid}`, { method: "DELETE", headers: json, cookie: member, body: { confirm: "nope" } });
+		expect(wrong.status).toBe(422);
+		expect((await call(`/workspaces/${wid}`, { method: "DELETE", headers: xhr, cookie: member, body: { confirm: "Renamed Co" } })).status).toBe(303);
+		expect(await wsId(member, "Renamed Co")).toBe(0);
+		// The session falls back to another workspace; the project is gone.
+		expect((await page("/home", member)).props.chrome.accountId).not.toBe(wid);
+		expect((await call(`/projects/${pid}`, { headers: xhr, cookie: member })).status).toBe(404);
+		// The main workspace can't be deleted.
+		expect((await call("/workspaces/1", { method: "DELETE", headers: json, cookie: owner, body: { confirm: "Enormicom" } })).status).toBe(422);
+	});
+});

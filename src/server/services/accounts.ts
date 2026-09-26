@@ -10,12 +10,26 @@ import { toPublicUser, type UserRow } from "../db";
 import {
 	addAccountMember,
 	type AccountRow,
+	clearSessionAccount,
+	countAccountAdmins,
+	countAccountMembers,
+	deleteAccount,
+	deleteAccountBookmarks,
+	deleteAccountFolders,
+	deleteAccountNotifications,
+	deleteAccountPings,
+	deleteAccountProjects,
+	deleteAccountTokens,
+	deleteAccountVisits,
 	findAccount,
 	findMembership,
 	getSessionAccount,
 	insertAccount,
 	listMemberships,
 	type MembershipRow,
+	removeAccountMember,
+	removeFromAccountProjects,
+	renameAccount,
 	setSessionAccount,
 } from "../queries/accounts";
 import { countUnreadByAccount } from "../queries/notifications";
@@ -96,11 +110,16 @@ export function account(accountId: number): AccountRow {
 	return a;
 }
 
-/** Create a new workspace; the creator becomes its admin. */
-export function createWorkspace(user: User, name: string): number {
+function cleanName(name: string): string {
 	const clean = name.trim();
 	if (!clean) throw new InputError({ name: "Name the workspace." });
 	if (clean.length > 80) throw new InputError({ name: "Keep the name under 80 characters." });
+	return clean;
+}
+
+/** Create a new workspace; the creator becomes its admin. */
+export function createWorkspace(user: User, name: string): number {
+	const clean = cleanName(name);
 	return transaction(() => {
 		const row = insertAccount.get(clean, user.id);
 		if (!row) throw new Error("insert failed");
@@ -116,3 +135,57 @@ export function ensureMember(accountId: number, userId: number, role: AccountRol
 }
 
 export const isMember = (accountId: number, userId: number): boolean => !!findMembership.get(accountId, userId);
+
+/** Only a workspace's admins may rename or delete it (from any of their workspaces). */
+function adminOf(user: User, accountId: number): AccountRow {
+	const m = findMembership.get(accountId, user.id);
+	if (!m) throw new NotFoundError("Workspace not found");
+	if (m.role !== "admin") throw new ForbiddenError("Only an admin of this workspace can change it.");
+	return account(accountId);
+}
+
+export function renameWorkspace(user: User, accountId: number, name: string): void {
+	adminOf(user, accountId);
+	renameAccount.run(cleanName(name), accountId);
+}
+
+/** Leave a workspace. The last admin must hand over (or delete it) first. */
+export function leaveWorkspace(user: User, accountId: number): void {
+	const m = findMembership.get(accountId, user.id);
+	if (!m) throw new NotFoundError("Workspace not found");
+	if (listMemberships.all(user.id).length <= 1) throw new InputError({ workspace: "This is your only workspace — you can't leave it." });
+	if (m.role === "admin" && (countAccountAdmins.get(accountId)?.n ?? 0) <= 1)
+		throw new InputError({
+			workspace:
+				(countAccountMembers.get(accountId)?.n ?? 0) > 1
+					? "You're its only admin. Make someone else an admin in Adminland first, or delete the workspace."
+					: "You're the only one here — delete the workspace instead.",
+		});
+	transaction(() => {
+		removeFromAccountProjects.run(accountId, user.id);
+		removeAccountMember.run(accountId, user.id);
+	});
+}
+
+/**
+ * Delete a workspace and everything in it. `confirm` must repeat its name.
+ * The default workspace stays: self sign-ups land there.
+ */
+export function deleteWorkspace(user: User, accountId: number, confirm: string): void {
+	const a = adminOf(user, accountId);
+	if (accountId === DEFAULT_ACCOUNT_ID) throw new InputError({ confirm: "The main workspace can't be deleted — new sign-ups join it." });
+	if (confirm.trim() !== a.name) throw new InputError({ confirm: "Type the workspace name exactly to confirm." });
+	transaction(() => purge(accountId));
+}
+
+function purge(accountId: number): void {
+	deleteAccountProjects.run(accountId);
+	deleteAccountFolders.run(accountId);
+	deleteAccountPings.run(accountId);
+	deleteAccountNotifications.run(accountId);
+	deleteAccountBookmarks.run(accountId);
+	deleteAccountVisits.run(accountId);
+	deleteAccountTokens.run(accountId);
+	clearSessionAccount.run(accountId);
+	deleteAccount.run(accountId);
+}

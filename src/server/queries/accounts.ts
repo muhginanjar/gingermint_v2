@@ -57,3 +57,26 @@ export const getSessionAccount = db.query<{ accountId: number | null }, [string]
 export const setSessionAccount = db.query<null, [number, string]>(
 	`UPDATE sessions SET account_id = ? WHERE token_hash = ?`,
 );
+
+export const renameAccount = db.query<null, [string, number]>(
+	`UPDATE accounts SET name = ? WHERE id = ?`,
+);
+export const countAccountMembers = db.query<{ n: number }, [number]>(
+	`SELECT COUNT(*) AS n FROM account_members WHERE account_id = ?`,
+);
+
+// Deleting a workspace. Projects cascade to everything inside them (to-dos,
+// messages, files rows, activity, webhooks…); the rest carry account_id
+// without a foreign key, so they are cleared one by one before the account row
+// (which cascades to account_members).
+export const deleteAccountProjects = db.query<null, [number]>(`DELETE FROM projects WHERE account_id = ?`);
+export const deleteAccountFolders = db.query<null, [number]>(`DELETE FROM folders WHERE account_id = ?`);
+export const deleteAccountPings = db.query<null, [number]>(`DELETE FROM ping_threads WHERE account_id = ?`);
+export const deleteAccountNotifications = db.query<null, [number]>(`DELETE FROM notifications WHERE account_id = ?`);
+export const deleteAccountBookmarks = db.query<null, [number]>(`DELETE FROM bookmarks WHERE account_id = ?`);
+export const deleteAccountVisits = db.query<null, [number]>(`DELETE FROM visits WHERE account_id = ?`);
+export const deleteAccountTokens = db.query<null, [number]>(`DELETE FROM api_tokens WHERE account_id = ?`);
+export const clearSessionAccount = db.query<null, [number]>(
+	`UPDATE sessions SET account_id = NULL WHERE account_id = ?`,
+);
+export const deleteAccount = db.query<null, [number]>(`DELETE FROM accounts WHERE id = ?`);
