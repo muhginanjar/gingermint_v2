@@ -7,8 +7,9 @@ module.exports = {
 	apps: [
 		{
 			name: "gingermintv2",
-			script: "src/index.ts",
-			interpreter: "bun",
+			script: "bun",
+			args: "run src/index.ts",
+			interpreter: "none",
 			cwd: __dirname,
 			exec_mode: "fork",
 			instances: 1,
