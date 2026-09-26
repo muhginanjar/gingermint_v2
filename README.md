@@ -59,6 +59,74 @@ the switcher, and links into another of your workspaces switch automatically.
 The SQLite database lives at `DATABASE_PATH` (default `./data/app.sqlite`) in
 WAL mode; migrations in `migrations/` run automatically at startup.
 
+## Changing the port
+
+The server listens on `PORT` (default `4000`). Bun loads `.env` from the
+working directory, so set it there — and keep `APP_URL` in step, since it is
+used for email links and OAuth redirects:
+
+```env
+PORT=8080
+APP_URL=http://localhost:8080      # or your public URL, e.g. https://gingermint.example.com
+```
+
+Or for a single run: `PORT=8080 bun run start`.
+
+In development a busy port is skipped automatically (4000 → 4001 …). In
+production (`NODE_ENV=production`) it is not — the server fails to start
+instead, so pick a free port. If you use Google sign‑in, the redirect URI in
+Google Console must match `APP_URL` (`<APP_URL>/auth/google/callback`).
+
+## Production with PM2
+
+`ecosystem.config.cjs` runs the app under PM2 with Bun as the interpreter:
+
+```bash
+bun install
+cp .env.example .env               # set NODE_ENV=production, PORT, APP_URL, mail, secrets
+bun run build                      # client + SSR bundles into dist/
+pm2 start ecosystem.config.cjs
+pm2 save && pm2 startup            # restart on server reboot (run the command it prints)
+```
+
+Everyday commands: `pm2 logs gingermintv2`, `pm2 restart gingermintv2`,
+`pm2 status`. If `bun` is not on PM2's `PATH`, set `interpreter` in
+`ecosystem.config.cjs` to the full path (`which bun`, e.g. `~/.bun/bin/bun`).
+
+> **Run one instance only** (fork mode, `instances: 1`). SQLite is a
+> single‑writer database and the Automatic Check‑ins scheduler runs
+> in‑process — cluster mode would send duplicate check‑in prompts.
+
+Put secrets in `.env`, not in `ecosystem.config.cjs` — values in its `env`
+block override `.env` and the file is committed.
+
+### Deploying updates — `deploy.sh`
+
+On the server, from the project root:
+
+```bash
+./deploy.sh
+```
+
+It runs these steps and stops on the first failure:
+
+1. **Backup** the SQLite database (`VACUUM INTO`, safe while the app is
+   running in WAL mode) to `$BACKUP_DIR` (default `~/gingermint/data/backup`).
+2. **Upload** the backup to Wasabi/S3 — optional; only when `WASABI_BUCKET`,
+   `WASABI_ACCESS_KEY`, `WASABI_SECRET_KEY` (and optionally `WASABI_REGION`,
+   `WASABI_ENDPOINT`) are set in `.env` and the `aws` CLI is installed.
+3. **`git pull`** — uncommitted local changes are stashed first, never
+   discarded. Exits early when there is nothing new.
+4. **`bun install`**, only when `package.json`/`bun.lock` changed or
+   `node_modules` is missing.
+5. **`bun run build`**.
+6. **`pm2 restart gingermintv2`** (or `pm2 start ecosystem.config.cjs` on the
+   first deploy). Migrations apply on startup.
+7. **Health check** on `http://localhost:$PORT/health`.
+
+Uploaded files in `data/uploads/` are not part of the backup — back that
+directory up separately.
+
 ## Feature map (Basecamp 5 document → where it lives)
 
 | Document section | In GingerMint |
