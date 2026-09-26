@@ -1,7 +1,11 @@
 <script lang="ts">
   import { Link, useForm } from '@inertiajs/svelte'
   import AuthLayout from '../components/AuthLayout.svelte'
+  import Button from '../components/ui/Button.svelte'
   import Field from '../components/ui/Field.svelte'
+  import Icon from '../components/ui/Icon.svelte'
+  import Input from '../components/ui/Input.svelte'
+  import * as icons from '../lib/icons'
 
   let { status = undefined }: { status?: string } = $props()
 
@@ -13,44 +17,45 @@
   }
 </script>
 
-<svelte:head><title>Forgot password</title></svelte:head>
+<svelte:head><title>Reset your password</title></svelte:head>
 
 <AuthLayout>
-  <h1 class="text-[1.6rem] m-0 mb-1 tracking-tight">Reset your password</h1>
-  <p class="text-muted mb-5">Enter your email and we will send you a reset link.</p>
+  <h1 class="text-2xl font-bold tracking-tight">Reset your password</h1>
+  <p class="mt-1.5 mb-6 text-sm text-muted-foreground">Enter your email and we'll send you a reset link.</p>
 
   {#if status === 'sent'}
     <div
-      class="px-4 py-3 rounded-lg text-sm mb-5 border border-green-200 bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300 dark:border-green-800"
+      class="mb-5 flex items-start gap-2.5 rounded-lg border border-green-600/20 bg-green-600/10 px-4 py-3 text-sm text-green-700 dark:text-green-300"
       role="status"
     >
-      If that email is registered, a reset link has been sent. Check your inbox.
+      <Icon icon={icons.Mail} size={16} class="mt-0.5 shrink-0" />
+      <span>If that email is registered, a reset link has been sent. Check your inbox.</span>
     </div>
   {/if}
 
-  <form onsubmit={submit} novalidate>
+  <form onsubmit={submit} novalidate class="grid gap-4">
     <Field id="email" label="Email" error={form.errors.email}>
-      <input
-        id="email"
-        type="email"
-        name="email"
-        autocomplete="email"
-        class="w-full px-3 py-2.5 border border-border rounded-lg bg-bg text-text text-[0.95rem] focus:outline-2 focus:outline-primary focus:-outline-offset-1 focus:border-primary"
-        bind:value={form.email}
-        onchange={() => form.clearErrors('email')}
-      />
+      <div class="relative">
+        <Icon icon={icons.Mail} size={16} class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          id="email"
+          type="email"
+          name="email"
+          autocomplete="email"
+          placeholder="you@company.com"
+          class="h-10 pl-9"
+          bind:value={form.email}
+          onchange={() => form.clearErrors('email')}
+        />
+      </div>
     </Field>
 
-    <button
-      class="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 w-full border border-primary rounded-lg bg-primary text-white font-semibold text-sm cursor-pointer transition-colors hover:bg-primary/90 hover:border-primary/90 hover:no-underline disabled:opacity-60 disabled:cursor-not-allowed"
-      type="submit"
-      disabled={form.processing}
-    >
+    <Button type="submit" size="lg" class="w-full" disabled={form.processing} aria-busy={form.processing}>
       {form.processing ? 'Sending…' : 'Send reset link'}
-    </button>
+    </Button>
   </form>
 
-  <p class="mt-5 text-center text-muted text-sm">
-    Remembered it? <Link href="/login">Back to login</Link>
+  <p class="mt-6 text-center text-sm text-muted-foreground">
+    Remembered it? <Link href="/login" class="font-semibold text-link underline-offset-4 hover:underline">Back to login</Link>
   </p>
 </AuthLayout>

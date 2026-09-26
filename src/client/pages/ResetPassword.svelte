@@ -1,7 +1,11 @@
 <script lang="ts">
   import { Link, useForm } from '@inertiajs/svelte'
   import AuthLayout from '../components/AuthLayout.svelte'
+  import Button from '../components/ui/Button.svelte'
   import Field from '../components/ui/Field.svelte'
+  import Icon from '../components/ui/Icon.svelte'
+  import Input from '../components/ui/Input.svelte'
+  import * as icons from '../lib/icons'
 
   let { email, token }: { email: string; token: string } = $props()
 
@@ -11,6 +15,7 @@
     password: '',
     passwordConfirmation: '',
   })
+  let showPassword = $state(false)
 
   function submit(e: SubmitEvent) {
     e.preventDefault()
@@ -18,26 +23,38 @@
   }
 </script>
 
-<svelte:head><title>Reset password</title></svelte:head>
+<svelte:head><title>Choose a new password</title></svelte:head>
 
 <AuthLayout>
-  <h1 class="text-[1.6rem] m-0 mb-1 tracking-tight">Choose a new password</h1>
-  <p class="text-muted mb-5">
-    Set a new password for <strong>{email}</strong>.
+  <h1 class="text-2xl font-bold tracking-tight">Choose a new password</h1>
+  <p class="mt-1.5 mb-6 text-sm text-muted-foreground">
+    Set a new password for <strong class="font-semibold text-foreground">{email}</strong>.
   </p>
 
-  <form onsubmit={submit} novalidate>
-    <Field id="password" label="New password" error={form.errors.password}>
-      <input
-        id="password"
-        type="password"
-        name="password"
-        autocomplete="new-password"
-        class="w-full px-3 py-2.5 border border-border rounded-lg bg-bg text-text text-[0.95rem] focus:outline-2 focus:outline-primary focus:-outline-offset-1 focus:border-primary"
-        bind:value={form.password}
-        onchange={() => form.clearErrors('password')}
-      />
-      <p class="text-xs text-muted mt-1">At least 8 characters.</p>
+  <form onsubmit={submit} novalidate class="grid gap-4">
+    <Field id="password" label="New password" error={form.errors.password} hint="At least 8 characters.">
+      <div class="relative">
+        <Icon icon={icons.Lock} size={16} class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          id="password"
+          type={showPassword ? 'text' : 'password'}
+          name="password"
+          autocomplete="new-password"
+          placeholder="New password"
+          class="h-10 pl-9 pr-10"
+          bind:value={form.password}
+          onchange={() => form.clearErrors('password')}
+        />
+        <button
+          type="button"
+          onclick={() => (showPassword = !showPassword)}
+          aria-label={showPassword ? 'Hide password' : 'Show password'}
+          aria-pressed={showPassword}
+          class="absolute right-1.5 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+        >
+          <Icon icon={showPassword ? icons.EyeOff : icons.Eye} size={16} />
+        </button>
+      </div>
     </Field>
 
     <Field
@@ -45,33 +62,33 @@
       label="Confirm password"
       error={form.errors.passwordConfirmation}
     >
-      <input
-        id="passwordConfirmation"
-        type="password"
-        name="passwordConfirmation"
-        autocomplete="new-password"
-        class="w-full px-3 py-2.5 border border-border rounded-lg bg-bg text-text text-[0.95rem] focus:outline-2 focus:outline-primary focus:-outline-offset-1 focus:border-primary"
-        bind:value={form.passwordConfirmation}
-        onchange={() => form.clearErrors('passwordConfirmation')}
-      />
+      <div class="relative">
+        <Icon icon={icons.Lock} size={16} class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          id="passwordConfirmation"
+          type={showPassword ? 'text' : 'password'}
+          name="passwordConfirmation"
+          autocomplete="new-password"
+          placeholder="Repeat the new password"
+          class="h-10 pl-9"
+          bind:value={form.passwordConfirmation}
+          onchange={() => form.clearErrors('passwordConfirmation')}
+        />
+      </div>
     </Field>
 
     {#if form.errors.token}
-      <p class="text-destructive text-xs mb-4" role="alert">
+      <p class="text-xs font-medium text-destructive" role="alert">
         {form.errors.token}
       </p>
     {/if}
 
-    <button
-      class="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 w-full border border-primary rounded-lg bg-primary text-white font-semibold text-sm cursor-pointer transition-colors hover:bg-primary/90 hover:border-primary/90 hover:no-underline disabled:opacity-60 disabled:cursor-not-allowed"
-      type="submit"
-      disabled={form.processing}
-    >
+    <Button type="submit" size="lg" class="w-full" disabled={form.processing} aria-busy={form.processing}>
       {form.processing ? 'Saving…' : 'Save new password'}
-    </button>
+    </Button>
   </form>
 
-  <p class="mt-5 text-center text-muted text-sm">
-    <Link href="/login">Back to login</Link>
+  <p class="mt-6 text-center text-sm text-muted-foreground">
+    <Link href="/login" class="font-semibold text-link underline-offset-4 hover:underline">Back to login</Link>
   </p>
 </AuthLayout>
